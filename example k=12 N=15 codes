@@ -1,0 +1,124 @@
+from sage.all import *
+import time
+
+# Set count variables
+count_true = 0
+count_false = 0
+k_list = [12]  # List of k values to validate
+
+# Set the range for N
+start = 15
+end = 15
+
+# Set precision
+prec = 200
+CC = ComplexField(prec)
+R.<z> = PolynomialRing(CC)
+
+for N in range(start, end + 1):
+    for current_k in k_list:  
+        try:
+            forms = Newforms(N, current_k, names='a')
+            print(f"\nProcessing level N = {N}, k={current_k}, found {len(forms)} Galois orbits")
+            
+            for f in forms:
+                K = f.hecke_eigenvalue_field()
+                embeddings = K.embeddings(CC)
+                
+                for phi in embeddings:
+                    # Generate q-expansion after embedding
+                    q_coeffs = [phi(c) for c in f.q_expansion(6).padded_list(6)]
+                    q_str = " + ".join([f"{c.real():.4f}q^{i+1}" for i, c in enumerate(q_coeffs[1:6])])
+                    
+                    # Directly obtain the Dokchitser object and reinitialize coefficients
+                    L = f.lseries(prec=200)
+                    an = [phi(f.coefficient(n)) for n in range(1, 1000)]
+                    
+                    # Correctly Initialize Coefficients
+                    L.init_coeffs(
+                        an,
+                        cutoff=1.0,
+                        max_imaginary_part=5.0,
+                        max_asymp_coeffs=100
+                    )
+                    
+                    try:
+                        # Compute L_f(k/2)
+                        L_k_half = L(current_k/2)
+                        
+                        # L_f(1), L_f(3), ..., L_f(k-1)
+                        L_odd_values = []
+                        for s in range(1, current_k, 2):  
+                            L_val = L(s)
+                            L_odd_values.append(f"L_f({s})={L_val.real():.4f}{'+' if L_val.imag() >= 0 else ''}{L_val.imag():.4f}i")
+                        L_odd_str = ", ".join(L_odd_values)
+                        
+                        # Construct Polynomial Coefficients
+                        pi_val = CC.pi()
+                        i_val = CC.gen()
+                        
+                        # Create an all-zero coefficient list (length = current_k - 1)
+                        coeff_list = [0] * (current_k-1)
+                        
+                        # Only consider even n: n=0,2,4,...,k-2
+                        for n in range(0, current_k-1, 2):
+                            s_val = current_k - n - 1
+                            L_val = L(s_val)
+                            coeff = (2 * pi_val * i_val) ** n / factorial(n) * L_val
+                            coeff_list[n] = coeff  
+                        
+                        # Construct the Polynomial
+                        poly = R(coeff_list)
+                        
+                        # Finding roots and calculating moduli
+                        roots = poly.roots(multiplicities=False)
+                        moduli = [abs(root) for root in roots]
+                        target_mod = 1 / CC(N).sqrt()  
+                        
+                        # Verifying if all roots have modulus 1/sqrt(N)
+                        valid = True
+                        for mod in moduli:
+                            if abs(mod - target_mod) > 1e-6:
+                                valid = False
+                                break
+                        
+                        # Formatted Output 
+                        terms = []
+                        for i, c in enumerate(coeff_list):
+                            if c != 0:  
+                                terms.append(f"({c.real():.4f}{'+' if c.imag() >= 0 else ''}{c.imag():.4f}i)z^{i}")
+                        poly_str = " + ".join(terms)
+                        
+                        roots_str = ", ".join([f"{root.real():.4f}{'+' if root.imag() >= 0 else ''}{root.imag():.4f}i" 
+                                              for root in roots])
+                        mods_str = ", ".join([f"{mod:.4f}" for mod in moduli])
+                        
+                        # Output all information in one line
+                        output_line = (
+                            f"q-exp: {q_str} | "
+                            f"L_f({current_k}/2)={L_k_half.real():.4f}{'+' if L_k_half.imag() >= 0 else ''}{L_k_half.imag():.4f}i | "
+                            f"L_odd: [{L_odd_str}] | "  
+                            f"poly: {poly_str} | "
+                            f"roots: [{roots_str}] | "
+                            f"mods: [{mods_str}] | "
+                            f"1/sqrt(N)={target_mod:.4f} | "
+                            f"valid: {valid}"
+                        )
+                        print(output_line)
+                        
+                        # Update Count
+                        if valid:
+                            count_true += 1
+                        else:
+                            count_false += 1
+                        
+                    except (RuntimeError, ValueError, TypeError) as e:
+                        print(f"Error occurred while calculating k={current_k}: {str(e)}")
+                        continue
+        
+        except RuntimeError:
+            print(f"N={N}, k={current_k}: No newform found")
+            continue
+
+# Output Summary
+print(f"\nVerification Results: valid count = {count_true}, invalid count = {count_false}")
