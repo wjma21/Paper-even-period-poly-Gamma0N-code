@@ -88,4 +88,4 @@ for k in range(k_start, k_end+1, k_step):
                     print("Conclusion: false")
                     count_false += 1
 
-print(f"\nFinal statistics：成立 {count_true} 项，不成立 {count_false} 项")
+print(f"\nFinal statistics: {count_true} cases true, {count_false} cases false")
