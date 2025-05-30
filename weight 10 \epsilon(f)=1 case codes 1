@@ -1,0 +1,66 @@
+# Set count variables 
+count_true = 0
+count_false = 0
+
+# Set the range for N
+start = 1
+end = 31
+
+for N in range(start, end + 1):
+    try:
+        forms = Newforms(N, 10, names='a')
+    except RuntimeError:
+        print(f"N={N}: no newform")
+        continue
+    
+    print(f"\nProcessing level N = {N}，found {len(forms)} Galois orbits")
+    
+    for f in forms:
+        K = f.hecke_eigenvalue_field()
+        embeddings = K.embeddings(ComplexField(200))
+        
+        for phi in embeddings:
+            # Generate q-expansion after embedding
+            q_coeffs = [phi(c) for c in f.q_expansion(5).padded_list(5)]
+            q_str = "q + " + " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
+            
+            # Directly obtain the Dokchitser object and reinitialize coefficients
+            L = f.lseries(prec=200)
+            an = [phi(f.coefficient(n)) for n in range(1, 1000)]
+            
+            # Correctly Initialize Coefficients
+            L.init_coeffs(
+                an,
+                cutoff=1.0,
+                max_imaginary_part=5.0,
+                max_asymp_coeffs=100
+            )
+
+            # Compute L(5) and check if it is zero
+            L5 = L(5).real()
+            if abs(L5) < 1e-10:  
+                print(f"Form: {q_str} | L5={L5:.6f} is zero，skipping")
+                continue
+            
+            L7 = L(7).real()
+            L9 = L(9).real()
+
+            # Compute parameters
+            c1 = (2 * pi.n(100)**2 / N) * (L7 / L9 )
+            c2 = (2 * pi.n(100)**4 / (3 * N**2)) * (L5 / L9)
+            
+            # Check conditions
+            cond1 = c1**2 >= 4*(c2 - 2)
+            cond2 = 2 - 2*c1 + c2 >=0
+            cond3 = c1 <= 4
+            result = cond1 and cond2 and cond3
+            
+            if result:
+                count_true += 1
+            else:
+                count_false += 1
+            
+            # Output
+            print(f"Form: {q_str} | L5={L5:.6f} | c1²={c1**2:.6f}, 4(c2-2)={4*(c2-2):.6f}, 2-2c1+c2={2-2*c1+c2:.6f}, c1={c1:.6f} → Conditions met: {result}")
+
+print(f"\nStatistics: {count_true} items satisfied, {count_false} items not satisfied")
