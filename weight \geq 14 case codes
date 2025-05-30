@@ -95,4 +95,4 @@ for k in k_values:
             else:
                 count_false += 1
 
-print(f"\nFinal Statistics：正确 {count_true} 项，错误 {count_false} 项")
+print(f"\nFinal statistics: {count_true} cases true, {count_false} cases false")
