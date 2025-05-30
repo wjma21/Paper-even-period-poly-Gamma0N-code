@@ -16,7 +16,7 @@ for k in k_values:
             print(f"N={N}, k={k}: no newform")
             continue
         
-        print(f"\nProcessing level N N = {N}, weight k = {k}，found {len(forms)} Galois orbits")
+        print(f"\nProcessing level N = {N}, weight k = {k}，found {len(forms)} Galois orbits")
         
         for f in forms:
             K = f.hecke_eigenvalue_field()
