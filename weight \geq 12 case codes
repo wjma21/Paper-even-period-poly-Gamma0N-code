@@ -1,1 +1,79 @@
+# Set count variables
+count_true = 0
+count_false = 0
 
+# Set parameter range
+k_values = [12, 16]  
+N_start = 17
+N_end = 32
+CC = ComplexField(200)
+
+for k in k_values:
+    for N in range(N_start, N_end + 1):
+        try:
+            forms = Newforms(N, k, names='a')
+        except RuntimeError:
+            print(f"N={N}, k={k}: no newform")
+            continue
+        
+        print(f"\nProcessing level N N = {N}, weight k = {k}，found {len(forms)} Galois orbits")
+        
+        for f in forms:
+            K = f.hecke_eigenvalue_field()
+            embeddings = K.embeddings(CC)
+            
+            for phi in embeddings:
+                # Generate q-expansion after embedding
+                q_coeffs = [phi(c) for c in f.q_expansion(5).padded_list(5)]
+                q_str = "q + " + " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
+                
+                # Initialize L function
+                L = f.lseries(prec=200)
+                an = [phi(f.coefficient(n)) for n in range(1, 1000)]
+                L.init_coeffs(
+                    an,
+                    cutoff=1.0,
+                    max_imaginary_part=5.0,
+                    max_asymp_coeffs=100
+                )
+                
+                # Calculate some L value
+                try:
+                    L_k_half = L(k//2) 
+                    L_k_minus_1 = L(k-1)
+                except (ZeroDivisionError, RuntimeError):
+                    print(f"Form: {q_str} | L function calculation error, skipping")
+                    continue
+                
+                # Construct Polynomial Q(z)
+                R.<z> = CC[]
+                Q = R(0)
+                max_n = k//4 - 1  
+                for n in range(0, max_n + 1):
+                    s = k-1 - 2*n
+                    L_s = L(s)
+                    coeff = (CC(2*pi)/CC(N).sqrt())^(2*n) / factorial(2*n) * (L_s / L_k_minus_1)
+                    exponent = (k//2 - 2) - 2*n
+                    Q += coeff * z^exponent
+                
+                # Compute roots and their moduli
+                roots = Q.roots(multiplicities=False)
+                moduli = [abs(root) for root in roots]
+                max_modulus = max(moduli) if roots else CC(0)
+                
+                # Output
+                print(f"\nForm: {q_str}")
+                print(f"L_f({k//2}) = {L_k_half:.6f}")
+                print("Roots:", [f"{root:.4f}" for root in roots])
+                print("Moduli:", [f"{m:.4f}" for m in moduli])
+                print(f"Max Moduli: {max_modulus:.6f}")
+                
+                # Determine and count
+                if max_modulus <= 1.0 - 1e-10:  
+                    print("Conclusion: true")
+                    count_true += 1
+                else:
+                    print("Conclusion: false")
+                    count_false += 1
+
+print(f"\nFinal statistics: {count_true} cases true, {count_false} cases false")
