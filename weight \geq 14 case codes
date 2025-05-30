@@ -1,1 +1,98 @@
+# Set count variables
+count_true = 0
+count_false = 0
 
+# Set parameter range
+k_values = [14, 18]  
+N_start = 17
+N_end = 25 
+CC = ComplexField(200)
+PI = CC.pi()
+
+for k in k_values:
+    for N in range(N_start, N_end + 1):
+        try:
+            forms = Newforms(N, k, names='a')
+        except RuntimeError:
+            print(f"N={N}, k={k}: no newform")
+            continue
+        
+        print(f"\nProcessing level N = {N}, weight k = {k}，found {len(forms)} Galois orbits")
+        
+        for f in forms:
+            K = f.hecke_eigenvalue_field()
+            embeddings = K.embeddings(CC)
+            
+            for phi in embeddings:
+                # Generate q-expansion after embedding
+                q_coeffs = [phi(c) for c in f.q_expansion(5).padded_list(5)]
+                q_str = " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
+                
+                # Initialize L function
+                L = f.lseries(prec=200)
+                an = [phi(f.coefficient(n)) for n in range(1, 1000)]
+                L.init_coeffs(
+                    an,
+                    cutoff=1.0,
+                    max_imaginary_part=5.0,
+                    max_asymp_coeffs=100
+                )
+
+            m = k//2 - 1 
+            t = m // 2
+            denominator_s = 2*m + 1  
+            numerator_s = m + 1       
+            try:
+                L_denominator = L(denominator_s).real()
+                L_numerator = L(numerator_s).real()
+            except (RuntimeError, ZeroDivisionError):
+                print(f"Form: {q_str} | L function calculation failed, skipping")
+                continue
+            
+            # Polynomial Construction
+            coeffs = [CC.zero()] * (m + 1)
+            
+            # Constant term
+            const_factor = (1/(2*factorial(m))) * ( (2*PI / CC(N).sqrt())**m )
+            coeffs[0] = const_factor * (L_numerator / L_denominator)
+            
+            # Summation Terms
+            for n in range(t):
+                s = denominator_s - 2*n  
+                L_s = L(s).real()
+                term = ( (2*PI / CC(N).sqrt())**(2*n) / factorial(2*n) ) * (L_s / L_denominator)
+                degree = m - 2*n
+                coeffs[degree] += term
+            
+            # Polynomial Expression Generation
+            R.<z> = CC[]
+            Q = R(coeffs)
+            poly_terms = []
+            for exp, coeff in enumerate(Q):
+                if coeff != 0:
+                    coeff_real = coeff.real().n(10)  
+                    if exp == 0:
+                        poly_terms.append(f"{coeff_real:.4f}")
+                    else:
+                        poly_terms.append(f"{coeff_real:.4f}z^{exp}")
+            Q_str = "Q(z) = " + " + ".join(poly_terms)
+            
+            # Root and Modulus Calculation
+            roots = Q.roots(multiplicities=False)
+            moduli = [abs(root).n(6) for root in roots]
+            max_modulus = max(moduli) if roots else CC(0)
+            all_inside = all(mod < 1.0 - 1e-10 for mod in moduli)
+            
+            # Output
+            root_str = "[" + ", ".join(f"{root.real():.4f}{'+'+f"{root.imag():.4f}i" if root.imag()!=0 else ''}" for root in roots) + "]"
+            mod_str = "[" + ", ".join(f"{mod:.4f}" for mod in moduli) + "]"
+            output = f"Form: {q_str} | {Q_str} | L(m+1)={L_numerator:.6f} | Roots: {root_str} | Modulo: {mod_str} | Max Moduli: {max_modulus:.6f} | Conclsion: {'✓' if all_inside else '✗'}"
+            print(output)
+            
+            # Statistics
+            if all_inside:
+                count_true += 1
+            else:
+                count_false += 1
+
+print(f"\nFinal Statistics：正确 {count_true} 项，错误 {count_false} 项")
