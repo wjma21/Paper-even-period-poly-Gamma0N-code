@@ -25,7 +25,7 @@ for k in k_values:
             for phi in embeddings:
                 # Generate q-expansion after embedding
                 q_coeffs = [phi(c) for c in f.q_expansion(5).padded_list(5)]
-                q_str = "q + " + " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
+                q_str = " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
                 
                 # Initialize L function
                 L = f.lseries(prec=200)
