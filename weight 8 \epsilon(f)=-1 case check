@@ -1,0 +1,65 @@
+# Set count variables
+count_true = 0
+count_false = 0
+
+# Set the range for N
+start = 1
+end = 106
+
+for N in range(start, end + 1):
+    try:
+        forms = Newforms(N, 8, names='a')
+    except RuntimeError:
+        print(f"N={N}: no newfom")
+        continue
+    
+    print(f"\nProcessing level N = {N}，found {len(forms)} Galois orbits")
+    
+    for f in forms:
+        K = f.hecke_eigenvalue_field()
+        embeddings = K.embeddings(ComplexField(200))
+        
+        for phi in embeddings:
+            # Generate q-expansion after embedding
+            q_coeffs = [phi(c) for c in f.q_expansion(5).padded_list(5)]
+            q_str = " + ".join(f"{c.real():.4f}q^{n+1}" for n, c in enumerate(q_coeffs[1:4]))
+            
+            # Directly obtain the Dokchitser object and reinitialize coefficients
+            L = f.lseries(prec=200)
+            an = [phi(f.coefficient(n)) for n in range(1, 1000)]
+            
+            # Correctly Initialize Coefficients
+            L.init_coeffs(
+                an,
+                cutoff=1.0,
+                max_imaginary_part=5.0,
+                max_asymp_coeffs=100
+            )
+
+            # Compute L(4) and check if it is zero
+            L4 = L(4).real()
+            if abs(L4) > 1e-10:  
+                print(f"Form: {q_str} | L4={L4:.6f} is not zero, skipping")
+                continue
+            
+            # Compute L value
+            L5 = L(5).real()
+            L7 = L(7).real()
+            
+            # Compute inequality terms
+            pi_sq_over_N = (2* pi.n(100) ** 2) / N
+            left_value = (pi_sq_over_N * L5).n(50)
+            ratio = left_value / L5
+            
+            # Check and count
+            if left_value <= L5:
+                result = "true"
+                count_true += 1
+            else:
+                result = "fase"
+                count_false += 1
+            
+            # Output
+            print(f"Form: {q_str} | L3={L3:.6f} | (π²/N)L3={left_value:.6f} | L5={L5:.6f} | Ratio={ratio:.6f} | Result: {result}")
+
+print(f"\nStatistics: {count_true} cases true, {count_false} cases false")
