@@ -3,7 +3,7 @@ count_true = 0
 count_false = 0
 
 # Set parameter range
-k_values = [16, 20, 24]  
+k_values = [12, 16, 20, 24]  
 N_start = 13
 N_end = 16
 CC = ComplexField(200)
