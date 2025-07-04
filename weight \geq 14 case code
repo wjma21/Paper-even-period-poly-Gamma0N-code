@@ -54,7 +54,7 @@ for k in k_values:
             
             # Constant term
             const_factor = (1/(2*factorial(m))) * ( (2*PI / CC(N).sqrt())**m )
-            coeffs[0] = const_factor * (L_numerator / L_denominator)
+            coeffs[0] = const_factor * (L_numerator)
             
             # Summation Terms
             for n in range(t):
