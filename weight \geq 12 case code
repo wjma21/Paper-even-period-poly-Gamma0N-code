@@ -5,7 +5,7 @@ count_false = 0
 # Set parameter range
 k_values = [12, 16]  
 N_start = 17
-N_end = 32
+N_end = 34
 CC = ComplexField(200)
 
 for k in k_values:
@@ -52,7 +52,7 @@ for k in k_values:
                 for n in range(0, max_n + 1):
                     s = k-1 - 2*n
                     L_s = L(s)
-                    coeff = (CC(2*pi)/CC(N).sqrt())^(2*n) / factorial(2*n) * (L_s / L_k_minus_1)
+                    coeff = (CC(2*pi)/CC(N).sqrt())^(2*n) / factorial(2*n) * (L_s)
                     exponent = (k//2 - 2) - 2*n
                     Q += coeff * z^exponent
                 
