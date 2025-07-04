@@ -5,7 +5,7 @@ count_false = 0
 # Set parameter range
 k_values = [14, 18]  
 N_start = 17
-N_end = 25 
+N_end = 24 
 CC = ComplexField(200)
 PI = CC.pi()
 
@@ -60,7 +60,7 @@ for k in k_values:
             for n in range(t):
                 s = denominator_s - 2*n  
                 L_s = L(s).real()
-                term = ( (2*PI / CC(N).sqrt())**(2*n) / factorial(2*n) ) * (L_s / L_denominator)
+                term = ( (2*PI / CC(N).sqrt())**(2*n) / factorial(2*n) ) * (L_s)
                 degree = m - 2*n
                 coeffs[degree] += term
             
