@@ -5,7 +5,7 @@ count_false = 0
 # Set parameter range
 k_values = [12, 16]  
 N_start = 17
-N_end = 34
+N_end = 35
 CC = ComplexField(200)
 
 for k in k_values:
